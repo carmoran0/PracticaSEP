@@ -83,8 +83,25 @@ void setup() {
       Serial.print(" - Precio: ");
       Serial.print(productos[i].precio);
       Serial.print(" EUR");
-      Serial.println();
+      Serial.print(" - Stock deseado: ");
+      Serial.print(productos[i].stockDeseado);
+      
+      // Calcular stock total actual
+      int stockTotal = 0;
+      for (int j = 0; j < 3; j++) {
+        stockTotal += productos[i].compartimentos[j];
+      }
+      Serial.print(" - Stock actual: ");
+      Serial.println(stockTotal);
+      
+      // Inicializar variables de parpadeo
+      productos[i].tiempoParpadeoLed = millis();
+      productos[i].estadoLed = false;
+      productos[i].parpadeando = false;
     }
+    
+    // Inicializar LEDs de existencias
+    actualizarLedsExistencias();
 }
 /*
 https://docs.arduino.cc/retired/hacking/software/PortManipulation/ DOC AQUI
@@ -187,6 +204,10 @@ void gestionarParpadeo(bool *pParpadeando, int *pContadorParpadeo, int *pPinParp
 }
 
 // Función para actualizar los LEDs de existencias de productos
+// Implementa la lógica de parpadeo proporcional a las existencias:
+// - Sin existencias: LED encendido fijo
+// - Pocas existencias (menos del 50% del stock deseado): LED parpadeando con periodo proporcional
+// - Existencias suficientes: LED apagado
 void actualizarLedsExistencias() {
   for (int i = 0; i < NUM_PRODUCTOS; i++) {
     // Calcular el stock total del producto
@@ -195,18 +216,46 @@ void actualizarLedsExistencias() {
       stockTotal += productos[i].compartimentos[j];
     }
     
-    // Sin existencias -> LED encendido
+    // Sin existencias -> LED encendido fijo
     if (stockTotal == 0) {
       swagDigitalWrite(productos[i].ledExistencias, HIGH);
       productos[i].parpadeando = false;
+      productos[i].estadoLed = true;
     }
-    // Con existencias -> LED apagado
+    // Pocas existencias (menos del 50% del stock deseado) -> LED parpadeando con periodo proporcional
+    else if (stockTotal < productos[i].stockDeseado / 2) {
+      // Si no estaba parpadeando antes, inicializar el tiempo
+      if (!productos[i].parpadeando) {
+        productos[i].tiempoParpadeoLed = millis();
+        productos[i].estadoLed = false;
+      }
+      
+      productos[i].parpadeando = true;
+      
+      // Calcular periodo de parpadeo proporcional a las existencias
+      // Más existencias = parpadeo más lento (periodo más largo)
+      // Menos existencias = parpadeo más rápido (periodo más corto)
+      // Periodo entre 200ms (mínimo) y 1000ms (máximo)
+      int periodoBase = 200; // Periodo mínimo en ms
+      int periodoMax = 1000; // Periodo máximo en ms
+      int periodoParpadeo = periodoBase + (stockTotal * (periodoMax - periodoBase) / (productos[i].stockDeseado / 2));
+      
+      // Gestionar el parpadeo del LED
+      if (millis() - productos[i].tiempoParpadeoLed >= periodoParpadeo) {
+        productos[i].tiempoParpadeoLed = millis();
+        productos[i].estadoLed = !productos[i].estadoLed;
+        swagDigitalWrite(productos[i].ledExistencias, productos[i].estadoLed);
+      }
+    }
+    // Existencias suficientes -> LED apagado
     else {
       swagDigitalWrite(productos[i].ledExistencias, LOW);
       productos[i].parpadeando = false;
+      productos[i].estadoLed = false;
     }
   }
 }
+
 
 void loop() {
 // put your main code here, to run repeatedly:
@@ -334,6 +383,25 @@ void loop() {
             Serial.println(productos[productoSeleccionado].compartimentos[i]);
           }
           
+          // Calcular stock total y mostrar estado
+          int stockTotal = 0;
+          for (int j = 0; j < 3; j++) {
+            stockTotal += productos[productoSeleccionado].compartimentos[j];
+          }
+          Serial.print("Stock total: ");
+          Serial.print(stockTotal);
+          Serial.print("/");
+          Serial.print(productos[productoSeleccionado].stockDeseado);
+          
+          // Mostrar estado de existencias
+          if (stockTotal == 0) {
+            Serial.println(" - ¡SIN EXISTENCIAS!");
+          } else if (stockTotal < productos[productoSeleccionado].stockDeseado / 2) {
+            Serial.println(" - ¡POCAS EXISTENCIAS! (LED parpadeando)");
+          } else {
+            Serial.println(" - Existencias suficientes");
+          }
+          
           iniciarParpadeo(ledEntrega, &parpadeando, &contadorParpadeo, &pinParpadeo, &tiempoParpadeo);
           estado = recogida; // Cambiar al estado recogida para esperar la recogida
           t_iniRecogida = millis(); // Iniciar el contador para el timeout
@@ -434,6 +502,25 @@ void loop() {
         Serial.print(i + 1);
         Serial.print("]: ");
         Serial.println(productos[prodIndex].compartimentos[i]);
+      }
+      
+      // Calcular stock total y mostrar estado
+      int stockTotal = 0;
+      for (int j = 0; j < 3; j++) {
+        stockTotal += productos[prodIndex].compartimentos[j];
+      }
+      Serial.print("Stock total: ");
+      Serial.print(stockTotal);
+      Serial.print("/");
+      Serial.print(productos[prodIndex].stockDeseado);
+      
+      // Mostrar estado de existencias
+      if (stockTotal == 0) {
+        Serial.println(" - ¡SIN EXISTENCIAS! (LED fijo)");
+      } else if (stockTotal < productos[prodIndex].stockDeseado / 2) {
+        Serial.println(" - ¡POCAS EXISTENCIAS! (LED parpadeando)");
+      } else {
+        Serial.println(" - Existencias suficientes");
       }
     } else {
       bloq = 0; // Resetear el bloqueo si se sueltan los botones
