@@ -11,6 +11,8 @@ const int ledsBinario3 = 2;
 const int ledExistencias1 = 11;
 const int ledExistencias2 = 12;
 const int ledExistencias3 = 13;
+const int ledFrio = A5;
+const int potenciometroTEMPERATURA = A0;
 
 // Estructura para almacenar la información de cada producto
 struct Producto {
@@ -69,6 +71,7 @@ void setup() {
     pinMode(11,OUTPUT); // LED EXISTENCIAS1
     pinMode(12,OUTPUT); // LED EXISTENCIAS2
     pinMode(13,OUTPUT); // LED EXISTENCIAS3
+    pinMode(A5,OUTPUT); // LED FRÍO
     Serial.begin(9600);
     t_ini = millis();
     Serial.println();
