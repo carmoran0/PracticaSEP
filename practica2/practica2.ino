@@ -12,7 +12,15 @@ const int ledExistencias1 = 11;
 const int ledExistencias2 = 12;
 const int ledExistencias3 = 13;
 const int ledFrio = A5;
-const int potenciometroTEMPERATURA = A0;
+const int potenciometroTEMPERATURA = 0;
+
+// Variables para el sistema de temperatura
+float temperatura = 20.0;       // Temperatura actual (valor inicial: 20°C)
+float tempMediaPonderada = 0.0; // Temperatura media ponderada de los productos
+const float TEMP_MIN = 0.0;     // Temperatura mínima del rango (0°C)
+const float TEMP_MAX = 40.0;    // Temperatura máxima del rango (40°C)
+const float HISTERESIS = 12.0;   // Valor de histéresis en grados
+bool sistemaFrioActivo = false; // Estado del sistema de frío
 
 // Estructura para almacenar la información de cada producto
 struct Producto {
@@ -72,10 +80,24 @@ void setup() {
     pinMode(12,OUTPUT); // LED EXISTENCIAS2
     pinMode(13,OUTPUT); // LED EXISTENCIAS3
     pinMode(A5,OUTPUT); // LED FRÍO
+    pinMode(A0,INPUT);  // POTENCIÓMETRO TEMPERATURA
     Serial.begin(9600);
     t_ini = millis();
     Serial.println();
     Serial.println("PROGRAMA CORRIENDO; Máquina expendedora con múltiples productos");
+    
+    // Inicializar sistema de temperatura
+    temperatura = leerTemperatura();
+    tempMediaPonderada = calcularTemperaturaMediaPonderada();
+    Serial.print("Temperatura inicial: ");
+    Serial.print(temperatura);
+    Serial.print("°C, Temperatura ideal: ");
+    Serial.print(tempMediaPonderada);
+    Serial.println("°C");
+    
+    // Inicializar estado del sistema de frío
+    swagDigitalWrite(ledFrio, LOW);
+    sistemaFrioActivo = false;
     
     // Mostrar información de los productos disponibles
     for (int i = 0; i < NUM_PRODUCTOS; i++) {
@@ -127,6 +149,9 @@ void swagDigitalWrite(int pin, bool valor) {
     } else {
       PORTB &= ~(1 << (pin - 8));
     }
+  } else if (pin == A5) {
+    // Para el pin A5 (LED de frío) usamos digitalWrite normal
+    digitalWrite(pin, valor);
   }
 }
 
@@ -259,6 +284,70 @@ void actualizarLedsExistencias() {
   }
 }
 
+// Función para leer la temperatura del potenciómetro (rango 0°C a 40°C)
+float leerTemperatura() {
+  // Leer el valor del potenciómetro y convertirlo al rango de temperatura (0-40°C)
+  int valorPot = swagAnalogRead(potenciometroTEMPERATURA);
+  // La función map() no funciona bien con flotantes, así que hacemos la conversión manualmente
+  float temp = TEMP_MIN + (valorPot * (TEMP_MAX - TEMP_MIN) / 1023.0);
+  return temp;
+}
+
+// Función para calcular la temperatura media ponderada de los productos
+// La ponderación se basa en la cantidad de productos en cada compartimento
+float calcularTemperaturaMediaPonderada() {
+  float sumaPonderada = 0.0;
+  int cantidadTotal = 0;
+  
+  for (int i = 0; i < NUM_PRODUCTOS; i++) {
+    int cantidadProducto = 0;
+    for (int j = 0; j < 3; j++) {
+      cantidadProducto += productos[i].compartimentos[j];
+    }
+    
+    // Solo considerar productos que tienen existencias
+    if (cantidadProducto > 0) {
+      sumaPonderada += productos[i].temperaturaIdeal * cantidadProducto;
+      cantidadTotal += cantidadProducto;
+    }
+  }
+  
+  // Si no hay productos, devolver una temperatura por defecto (20°C)
+  if (cantidadTotal == 0) {
+    return 20.0;
+  }
+  
+  return sumaPonderada / cantidadTotal;
+}
+
+// Función para controlar el sistema de frío con histéresis
+void controlarSistemaFrio() {
+  // Calcular la temperatura media ponderada de los productos
+  tempMediaPonderada = calcularTemperaturaMediaPonderada();
+  
+  // Aplicar histéresis para evitar oscilaciones rápidas
+  if (!sistemaFrioActivo && temperatura < tempMediaPonderada - HISTERESIS) {
+    // Activar el sistema de frío
+    sistemaFrioActivo = true;
+    swagDigitalWrite(ledFrio, HIGH);
+    Serial.print("Sistema de frío ACTIVADO. Temperatura: ");
+    Serial.print(temperatura);
+    Serial.print("°C, Temperatura ideal: ");
+    Serial.print(tempMediaPonderada);
+    Serial.println("°C");
+  } 
+  else if (sistemaFrioActivo && temperatura > tempMediaPonderada) {
+    // Desactivar el sistema de frío
+    sistemaFrioActivo = false;
+    swagDigitalWrite(ledFrio, LOW);
+    Serial.print("Sistema de frío DESACTIVADO. Temperatura: ");
+    Serial.print(temperatura);
+    Serial.print("°C, Temperatura ideal: ");
+    Serial.print(tempMediaPonderada);
+    Serial.println("°C");
+  }
+}
+
 
 void loop() {
 // put your main code here, to run repeatedly:
@@ -267,6 +356,24 @@ void loop() {
   estadoBotonPuente = gestionBoton(estadoBotonPuente, swagDigitalRead(detectorRecogida));
   gestionarParpadeo(&parpadeando, &contadorParpadeo, &pinParpadeo, &tiempoParpadeo);
   actualizarLedsExistencias(); // Actualizar los LEDs de existencias
+  
+  // Leer la temperatura actual del potenciómetro
+  temperatura = leerTemperatura();
+  
+  // Controlar el sistema de frío basado en la temperatura
+  controlarSistemaFrio();
+  
+  // Mostrar la temperatura actual cada 5 segundos
+  static unsigned long ultimoTiempoMostrarTemp = 0;
+  if (millis() - ultimoTiempoMostrarTemp >= 5000) {
+    ultimoTiempoMostrarTemp = millis();
+    Serial.print("Temperatura actual: ");
+    Serial.print(temperatura);
+    Serial.print("°C, Temperatura ideal: ");
+    Serial.print(tempMediaPonderada);
+    Serial.print("°C, Sistema de frío: ");
+    Serial.println(sistemaFrioActivo ? "ACTIVO" : "INACTIVO");
+  }
   
   int valor = swagAnalogRead(potenciometro) * 16 / 1024;
   bool valorBinario[4]; // Array para almacenar el valor binario
