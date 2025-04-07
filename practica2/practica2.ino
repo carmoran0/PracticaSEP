@@ -1,14 +1,14 @@
 const int botonA = 8;
 const int botonB = 9;
-const int ledEntrega = 7;
-const int ledError = 6;
+const int ledEntrega = A2;
+const int ledError = A4;
 const int detectorRecogida = 10;
 const int potenciometro = 1;
 const int ledsBinario0 = 5;
 const int ledsBinario1 = 4;
 const int ledsBinario2 = 3;
-const int ledsBinario3 = 2;
-const int ledExistencias1 = 11;
+const int ledsBinario3 = 10;
+const int ledExistencias1 = 7;
 const int ledExistencias2 = 12;
 const int ledExistencias3 = 13;
 const int ledFrio = A5;
@@ -67,16 +67,16 @@ unsigned long t_password = 0; // Tiempo para controlar la entrada de contraseña
 void setup() {
   // put your setup code here, to run once
     delay(500);
-    pinMode(2,OUTPUT);
+    pinMode(10,OUTPUT);
     pinMode(3,OUTPUT);
     pinMode(4,OUTPUT);
     pinMode(5,OUTPUT);
-    pinMode(6,OUTPUT); // LED ERROR
-    pinMode(7,OUTPUT); // LED TRANS
+    pinMode(A4,OUTPUT); // LED ERROR
+    pinMode(A2,OUTPUT); // LED TRANS
     pinMode(8,INPUT_PULLUP); // SI USO PULLUP PORQUE no   HE PUESTO LAS RESISTENCIAS YO
     pinMode(9,INPUT_PULLUP);
     pinMode(10,INPUT_PULLUP);
-    pinMode(11,OUTPUT); // LED EXISTENCIAS1
+    pinMode(7,OUTPUT); // LED EXISTENCIAS1
     pinMode(12,OUTPUT); // LED EXISTENCIAS2
     pinMode(13,OUTPUT); // LED EXISTENCIAS3
     pinMode(A5,OUTPUT); // LED FRÍO
@@ -149,7 +149,7 @@ void swagDigitalWrite(int pin, bool valor) {
     } else {
       PORTB &= ~(1 << (pin - 8));
     }
-  } else if (pin == A5) {
+  } else {
     // Para el pin A5 (LED de frío) usamos digitalWrite normal
     digitalWrite(pin, valor);
   }
