@@ -1,5 +1,5 @@
 const int botonA = 8;
-const int botonB = 9;
+const int botonB = 12;
 const int ledEntrega = A2;
 const int ledError = A4;
 const int detectorRecogida = 10;
@@ -8,9 +8,9 @@ const int ledsBinario0 = 5;
 const int ledsBinario1 = 4;
 const int ledsBinario2 = 3;
 const int ledsBinario3 = 10;
-const int ledExistencias1 = 7;
-const int ledExistencias2 = 12;
-const int ledExistencias3 = 13;
+const int ledExistencias1 = 13;
+const int ledExistencias2 = 7;
+const int ledExistencias3 = 11;
 const int ledFrio = A5;
 const int potenciometroTEMPERATURA = 0;
 
@@ -74,11 +74,11 @@ void setup() {
     pinMode(A4,OUTPUT); // LED ERROR
     pinMode(A2,OUTPUT); // LED TRANS
     pinMode(8,INPUT_PULLUP); // SI USO PULLUP PORQUE no   HE PUESTO LAS RESISTENCIAS YO
-    pinMode(9,INPUT_PULLUP);
+    pinMode(12,INPUT_PULLUP);
     pinMode(10,INPUT_PULLUP);
-    pinMode(7,OUTPUT); // LED EXISTENCIAS1
-    pinMode(12,OUTPUT); // LED EXISTENCIAS2
-    pinMode(13,OUTPUT); // LED EXISTENCIAS3
+    pinMode(13,OUTPUT); // LED EXISTENCIAS1
+    pinMode(7,OUTPUT); // LED EXISTENCIAS2
+    pinMode(11,OUTPUT); // LED EXISTENCIAS3
     pinMode(A5,OUTPUT); // LED FRÍO
     pinMode(A0,INPUT);  // POTENCIÓMETRO TEMPERATURA
     Serial.begin(9600);
